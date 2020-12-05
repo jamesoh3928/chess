@@ -1,0 +1,69 @@
+body {
+	margin: 0;
+}
+
+
+#board {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	border: 2px solid #000;
+    width: 640px;
+    height: 640px;
+	transform: translate(-50%, -50%);
+}
+
+#board > .tile {
+	position: absolute;
+	width: 12.5%;
+	height: 12.5%;
+}
+#board > .tile.black {
+	background: rgba(0, 0, 0, 0.75);
+}
+#board > .tile.white {
+	background: #fff;
+}
+#board > .tile.indicator {
+	background: rgba(100, 100, 255, 0.75) !important;
+}
+
+
+#board > .piece {
+	position: absolute;
+	width: 45px;
+	height: 45px;
+	background: url('../resources/chess_pieces.svg');
+	background-repeat: no-repeat;
+	cursor: pointer;
+	transform: scale(1.5) translate(-50%, -50%);
+	transform-origin: top left;
+	z-index: 1;
+}
+#board > .piece:hover {
+	opacity: 0.5;
+}
+#board > .piece.black {
+	background-position-y: -45px;
+}
+#board > .piece.white {
+	background-position-y: 0;
+}
+#board > .piece.pawn {
+	background-position-x: -225px;
+}
+#board > .piece.rook {
+	background-position-x: -180px;
+}
+#board > .piece.knight {
+	background-position-x: -135px;
+}
+#board > .piece.bishop {
+	background-position-x: -90px;
+}
+#board > .piece.queen {
+	background-position-x: -45px;
+}
+#board > .piece.king {
+	background-position-x: 0px;
+}
