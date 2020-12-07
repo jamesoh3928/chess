@@ -36,33 +36,8 @@ class Piece {
 		this.moves = [];
 	}
 	
-	showIndicator() {
-		switch (this.type) {
-			case "rook": {
-				break;
-			}
-			case "knight": {
-				break;
-			}
-			case "bishop": {
-				break;
-			}
-			case "king": {
-				break;
-			}
-			case "queen": {
-				break;
-			}
-			default: {
-				const offset = this.isBlack ? -1 : 1;
-				TILES[COL_LETTERS[this.position.col] + (this.position.row + offset + 1)].addClass("indicator");
-				//console.log(COL_LETTERS[this.position.col] + (this.position.row + offset + 1));
-			}
-		}
-	}
-	
-	recurse(row, col, rowIncrement, colIncrement) {
-		if (row < 0 || row > 7 || col < 0 || col > 7) {
+	recurse(row, col, rowIncrement, colIncrement, range) {
+		if (row < 0 || row > 7 || col < 0 || col > 7 || range <= 0) {
 			return;
 		}
 
@@ -74,23 +49,84 @@ class Piece {
 		GAME_BOARD[row][col].validPieces.push(this);
 
 		if (GAME_BOARD[row][col].piece === null) {
-			this.recurse(row + rowIncrement, col + colIncrement, rowIncrement, colIncrement);
+			this.recurse(row + rowIncrement, col + colIncrement, rowIncrement, colIncrement, --range);
 		}
 	}
 	
-	calculateOrthogonal() {
-		this.recurse(this.position.row + 1, this.position.col, 1, 0);
-		this.recurse(this.position.row - 1, this.position.col, -1, 0);
-		this.recurse(this.position.row, this.position.col + 1, 0, 1);
-		this.recurse(this.position.row, this.position.col - 1, 0, -1);
+	calculateKnight(){
+		const piece = this;
+		function push(row, col) {
+			if (row >= 0 && row <= 7 && col >= 0 && col <= 7 && (GAME_BOARD[row][col].piece === null || GAME_BOARD[row][col].piece.isBlack !== piece.isBlack)) {
+				piece.moves.push({row, col});
+				GAME_BOARD[row][col].validPieces.push(piece);
+			}
+		}
+		
+		const ones = [1, -1]
+		const twos = [2, -2]
+		for (const one of ones) {
+			for (const two of twos) {
+				push(this.position.row + one, this.position.col + two);
+				push(this.position.row + two, this.position.col + one);
+			}
+		}
 	}
 	
-	calculateDiagonal() {
-		this.recurse(this.position.row + 1, this.position.col + 1, 1, 1);
-		this.recurse(this.position.row + 1, this.position.col - 1, 1, -1);
-		this.recurse(this.position.row - 1, this.position.col + 1, -1, 1);
-		this.recurse(this.position.row - 1, this.position.col - 1, -1, -1);
+	calculatePawn() {
+		const piece = this;
+		function recurseVertical(row, col, rowIncrement, range) {
+			if (row < 0 || row > 7 || col < 0 || col > 7 || range <= 0) {
+				return;
+			}
+
+			if (GAME_BOARD[row][col].piece !== null) {
+				return;
+			}
+
+			piece.moves.push({row, col});
+			GAME_BOARD[row][col].validPieces.push(piece);
+
+			if (GAME_BOARD[row][col].piece === null) {
+				recurseVertical(row + rowIncrement, col, rowIncrement, --range);
+			}
+		}
+		
+		const range = (piece.position.row === 1 && !piece.isBlack ) || (piece.position.row === 6 && piece.isBlack) ? 2 : 1;
+		const rowInc = (this.isBlack ? -1 : 1);
+		recurseVertical(this.position.row + rowInc, this.position.col, rowInc, range);
+		
+		this.recurse(this.position.row + rowInc, this.position.col + 1, 0, 0, 1);
+		this.recurse(this.position.row + rowInc, this.position.col - 1, 0, 0, 1);
+		
 	}
+	
+	calculateOrthogonal(range = 7) {
+		this.recurse(this.position.row + 1, this.position.col, 1, 0, range);
+		this.recurse(this.position.row - 1, this.position.col, -1, 0, range);
+		this.recurse(this.position.row, this.position.col + 1, 0, 1, range);
+		this.recurse(this.position.row, this.position.col - 1, 0, -1, range);
+	}
+	
+	calculateDiagonal(range = 7) {
+		this.recurse(this.position.row + 1, this.position.col + 1, 1, 1, range);
+		this.recurse(this.position.row + 1, this.position.col - 1, 1, -1, range);
+		this.recurse(this.position.row - 1, this.position.col + 1, -1, 1, range);
+		this.recurse(this.position.row - 1, this.position.col - 1, -1, -1, range);
+	}
+	
+	calculateValidPawnMoves() {
+		if (this.type !== "pawn") {
+			return this.moves;
+		}
+		
+		const validMoves = [];
+		for (const move of this.moves) {
+			
+		}
+		
+		return [];
+	}
+	
 	
 	clearMoves() {
 		for (const position of this.moves) {
@@ -110,35 +146,30 @@ class Piece {
 		switch (this.type) {
 			case "rook": {
 				this.calculateOrthogonal();
-				
-				console.log(this.moves);
 				break;
 			}
 			case "knight": {
+				this.calculateKnight();
 				break;
 			}
 			case "bishop": {
 				this.calculateDiagonal();
-				
-				console.log(this.moves);
 				break;
 			}
 			case "king": {
+				this.calculateOrthogonal(1);
+				this.calculateDiagonal(1);
 				break;
 			}
 			case "queen": {
 				this.calculateOrthogonal();
 				this.calculateDiagonal();
-				
-				console.log(this.moves);
 				break;
 			}
 			default: {
-				// pawn
+				this.calculatePawn();
 			}
 		}
-		
-		console.log(GAME_BOARD);
 	}
 }
 
@@ -203,10 +234,6 @@ function onInit() {
 				}
 			}
 			
-			if (row.color === "white" && type !== "queen") {
-				continue;
-			}
-			
 			const pieceObj = new Piece(type, row.color, {row: row.number - 1, col: col - 1}, piece);
 			GAME_BOARD[row.number - 1][col - 1].piece = pieceObj;
 			
@@ -214,6 +241,22 @@ function onInit() {
 			piece.css("top", (pos.top + 40) + "px");
 			piece.css("left", (pos.left + 40) + "px");
 			piece.click(function() {
+				$(".tile.indicator").remove();
+				
+				if (piece.hasClass("selected")) {
+					piece.removeClass("selected");
+				} else {
+					$("#board").children(".piece.selected").removeClass("selected");
+					piece.addClass("selected");
+					
+					for (const move of pieceObj.moves) {
+						const tile = TILES[COL_LETTERS[move.col] + (move.row + 1)];
+						const indicator = $('<div class="tile indicator" />').appendTo("#board");
+						indicator.css("bottom", tile.css("bottom"));
+						indicator.css("left", tile.css("left"));
+					}
+				}
+				
 				//GameState.ClickedPiece = GAME_BOARD[row.number - 1][col - 1];
 				/*const piece = GAME_BOARD[row.number - 1][col - 1];
 				
@@ -223,13 +266,17 @@ function onInit() {
 				if (GameState.ClickFlag) {
 					piece.showIndicator();
 				}*/
-				
-				pieceObj.calculateMoves();
 			});
 		}
 	}
 	
-	//console.log(GAME_BOARD);
+	for (let row = 0; row < 8; row++) {
+		for (let col = 0; col < 8; col++) {
+			if (GAME_BOARD[row][col].piece !== null)
+				GAME_BOARD[row][col].piece.calculateMoves();
+		}
+	}
+	console.log(GAME_BOARD);
 }
 
 //=====================================
