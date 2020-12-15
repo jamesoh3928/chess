@@ -1,3 +1,4 @@
+// TODO when king capture other piece, check if that is check!!!!!!
 class Board {	
 	constructor() {
 		this.state = []; //TODO Time stone, modify state check if the move makes it 'check'
@@ -339,6 +340,7 @@ class Piece {
 	}
 	
 	calculateKing() {
+		this.moves = [];
 		this.calculateOrthogonal(1);
 		this.calculateDiagonal(1);
 	}
