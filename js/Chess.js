@@ -192,6 +192,24 @@ class Board {
 			if (piece.isBlack === isBlack) {
 				continue;
 			}
+			if (piece.type === "pawn"){
+				const rowInc = (piece.isBlack)? -1: 1;
+				for (const colInc of [1, -1]) {
+					const col = piece.position.col + colInc;
+					const row = piece.position.row + rowInc;
+					
+					if (col > 7 || col < 0 || row > 7 || row < 0)
+						continue;
+					
+					const move = {row, col};
+					
+					if (move.row === king.position.row && move.col === king.position.col) {
+						return true;
+					}
+				}
+				
+				continue;	
+			}
 			
 			for (const move of piece.moves) {
 				if (move.row === king.position.row && move.col === king.position.col) {
