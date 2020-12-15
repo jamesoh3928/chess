@@ -75,8 +75,8 @@ function refreshBoardUI(board) {
 function onInit() {
 	const board = new Board();
 	board.onTurnChange = function(isBlackTurn) {
-		console.log(isBlackTurn ? "Black's Turn" : "White's Turn");
-		console.log(board.capturedPieces);
+		// console.log(isBlackTurn ? "Black's Turn" : "White's Turn");
+		// console.log(board.capturedPieces);
 		refreshBoardUI(board);
 		
 		$("#board").children(".piece.disabled").removeClass("disabled");

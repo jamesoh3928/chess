@@ -1,10 +1,11 @@
 class Board {	
 	constructor() {
-		this.state = []; // Time stone, modify state check if the move makes it 'check'
+		this.state = []; //TODO Time stone, modify state check if the move makes it 'check'
 		this._activePieces = [];
 		this._capturedPieces = [];
 		this._isBlackTurn = false;
 		this._onTurnChange = null;
+		this._kings = [];
 		
 		for (let row = 0; row < 8; row++) {
 			this.state[row] = [];
@@ -52,6 +53,9 @@ class Board {
 				const piece = new Piece(type, row.color, {row: row.number, col}, this);
 				this.state[row.number][col].piece = piece;
 				this._activePieces.push(piece);
+				const ind = (piece.isBlack)? 0: 1;
+				if (piece.type == "king")
+					this._kings[ind] = piece;
 			}
 		}
 
@@ -201,10 +205,6 @@ class Board {
 	
 	refresh() {
 		for (const piece of this._activePieces) {
-			if (piece.type === "king") {
-				continue;
-			}
-			
 			piece.calculateMoves();
 		}
 	}
@@ -321,102 +321,29 @@ class Piece {
 	}
 	
 	calculateKing() {
-		this.board.state[this.position.row][this.position.col].piece = null;
-		this.board.refresh();
-		
 		this.calculateOrthogonal(1);
 		this.calculateDiagonal(1);
-		
-		let validMoves = [];
-		let enemyKingMoves = [];
-		
-		for (const move of this.moves) {
-			let validFlag = true;
-
-			loop_outer:
-			for (const piece of this.board.activePieces) {
-				if (piece.isBlack === this.isBlack) {
-					continue;
-				}
-				
-				if (piece.type === "king") {
-					for (const rowOffset of [-1, 0, 1]) {
-						const row = piece.position.row + rowOffset;
-						
-						if (row < 0 || row > 7) {
-							continue;
-						}
-						
-						for (const colOffset of [-1, 0, 1]) {
-							const col = piece.position.col + colOffset;
-							
-							if (col < 0 || col > 7) {
-								continue;
-							}
-							
-							if (rowOffset === 0 && colOffset === 0) {
-								continue;
-							}
-							
-							enemyKingMoves.push({row, col});
-						}
-					}
-				}
-				
-				let checkMoves = [];
-				if (piece.type === "pawn") {
-					const row = piece.position.row + (piece.isBlack ? -1 : 1);
-					
-					if (row >= 0 && row <= 7) {
-						for (const colOffset of [-1, 1]) {
-							const col = piece.position.col + colOffset;
-							
-							if (col < 0 || col > 7) {
-								continue;
-							}
-							
-							checkMoves.push({row, col});
-						}
-					}
-				} else {
-					checkMoves = piece.moves;
-				}
-
-				loop_inner:
-				for (const checkMove of checkMoves) {
-					if (checkMove.row === move.row && checkMove.col === move.col) {
-						validFlag = false;
-						break loop_outer;
-					}
-				}
-			}
-			
-			if (validFlag) {
-				validMoves.push(move);
-			}
-		}
-		
-		let trueValidMoves = [];
-		for (const validMove of validMoves) {
-			let flag = true;
-			
-			for (const enemyKingMove of enemyKingMoves) {
-				if (enemyKingMove.row === validMove.row && enemyKingMove.col === validMove.col) {
-					flag = false;
-					break;
-				}
-			}
-			
-			if (flag) {
-				trueValidMoves.push(validMove);
-			}
-		}
-		
-		this.moves = trueValidMoves;
-		this.board.state[this.position.row][this.position.col].piece = this;
-		this.board.refresh();
 	}
 	
+	checkKingMoves() {
+		const originalPosition = {row: this.position.row, col: this.position.col};
+		
+		const finalMoves = [];
+		
+		for (const move of this.moves)	{
+			this.position.row = move.row;
+			this.position.col = move.col;
+			
+			if (this.board.isChecked(this.isBlack)){
+				continue;
+			}
+			finalMoves.push({row: this.position.row, col: this.position.col});
+		}
+		
+		this.position.row = originalPosition.row;
+		this.position.col = originalPosition.col;
+		return finalMoves;
+	}
 	
 	clearMoves() {
 		this.moves = [];
@@ -427,7 +354,7 @@ class Piece {
 		
 		if (this.board.isChecked(this.isBlack)) {
 			// timestone
-			return;
+			// return;
 		}
 		
 		switch (this.type) {
@@ -444,7 +371,16 @@ class Piece {
 				break;
 			}
 			case "king": {
-				this.calculateKing();
+				for (const king of this.board._kings) {
+					king.calculateKing();
+				}
+				let newMoves = []
+				for (const king of this.board._kings) {
+					newMoves.push(king.checkKingMoves());
+				}
+				for (let i = 0; i < newMoves.length; i ++) {
+					this.board._kings[i].moves = newMoves[i];
+				}
 				break;
 			}
 			case "queen": {
