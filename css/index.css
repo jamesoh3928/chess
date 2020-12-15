@@ -2,7 +2,6 @@ body {
 	margin: 0;
 }
 
-
 #board {
 	position: absolute;
 	top: 50%;
@@ -45,12 +44,15 @@ body {
 	transform-origin: top left;
 	z-index: 7;
 }
-#board > .piece:not(.selected):hover {
+#board > .piece:not(.selected):not(.disabled):hover {
 	opacity: 0.5;
 }
 #board > .piece.selected {
 	border: 2px solid rgb(150, 150, 255);
 	border-radius: 10%;
+}
+#board > .piece.disabled {
+	cursor: default !important;
 }
 #board > .piece.black {
 	background-position-y: -45px;
