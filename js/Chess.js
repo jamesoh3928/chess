@@ -1,4 +1,4 @@
-// TODO when king capture other piece, check if that is check!!!!!!
+// TODO when king captures other piece, check if that is check!!!!!!
 class Board {	
 	constructor() {
 		this.state = []; //TODO Time stone, modify state check if the move makes it 'check'
@@ -7,6 +7,7 @@ class Board {
 		this._isBlackTurn = false;
 		this._onTurnChange = null;
 		this._kings = [];
+		this._possibleMoves = [new Set(), new Set()];
 		
 		for (let row = 0; row < 8; row++) {
 			this.state[row] = [];
@@ -177,7 +178,7 @@ class Board {
 	
 	isChecked(isBlack) {
 		let king = null;
-		
+
 		for (const piece of this._activePieces) {
 			if (piece.isBlack !== isBlack) {
 				continue;
@@ -188,36 +189,43 @@ class Board {
 				break;
 			}
 		}
-		
-		for (const piece of this._activePieces) {
-			if (piece.isBlack === isBlack) {
-				continue;
-			}
-			if (piece.type === "pawn"){
-				const rowInc = (piece.isBlack)? -1: 1;
-				for (const colInc of [1, -1]) {
-					const col = piece.position.col + colInc;
-					const row = piece.position.row + rowInc;
-					
-					if (col > 7 || col < 0 || row > 7 || row < 0)
-						continue;
-					
-					const move = {row, col};
-					
-					if (move.row === king.position.row && move.col === king.position.col) {
-						return true;
-					}
-				}
-				
-				continue;	
-			}
-			
-			for (const move of piece.moves) {
-				if (move.row === king.position.row && move.col === king.position.col) {
-					return true;
-				}
-			}
+
+		//Test
+		const ind = (isBlack)? 1: 0;
+		for (const move of this._possibleMoves[ind]) {
+			if (move.row === king.position.row && move.col === king.position.col)
+				return true;
 		}
+		
+		// for (const piece of this._activePieces) {
+		// 	if (piece.isBlack === isBlack) {
+		// 		continue;
+		// 	}
+		// 	if (piece.type === "pawn"){
+		// 		const rowInc = (piece.isBlack)? -1: 1;
+		// 		for (const colInc of [1, -1]) {
+		// 			const col = piece.position.col + colInc;
+		// 			const row = piece.position.row + rowInc;
+					
+		// 			if (col > 7 || col < 0 || row > 7 || row < 0)
+		// 				continue;
+					
+		// 			const move = {row, col};
+					
+		// 			if (move.row === king.position.row && move.col === king.position.col) {
+		// 				return true;
+		// 			}
+		// 		}
+				
+		// 		continue;	
+		// 	}
+			
+		// 	for (const move of piece.moves) {
+		// 		if (move.row === king.position.row && move.col === king.position.col) {
+		// 			return true;
+		// 		}
+		// 	}
+		// }
 		
 		return false;
 	}
@@ -242,6 +250,8 @@ class Piece {
 		if (row < 0 || row > 7 || col < 0 || col > 7 || range <= 0) {
 			return;
 		}
+		
+		this.board._possibleMoves[(this.isBlack)? 0: 1].add({row, col}); 
 
 		if (this.board.state[row][col].piece !== null && this.board.state[row][col].piece.isBlack === this.isBlack) {
 			return;
@@ -266,6 +276,8 @@ class Piece {
 		const twos = [2, -2]
 		for (const one of ones) {
 			for (const two of twos) {
+				this.board._possibleMoves[(this.isBlack)? 0: 1].add({row: this.position.row + one, col: this.position.col + two});
+				this.board._possibleMoves[(this.isBlack)? 0: 1].add({row: this.position.row + two, col: this.position.col + one});
 				push(this.position.row + one, this.position.col + two);
 				push(this.position.row + two, this.position.col + one);
 			}
@@ -305,7 +317,7 @@ class Piece {
 			if (col < 0 || col > 7) {
 				continue;
 			}
-			
+			this.board._possibleMoves[(this.isBlack)? 0: 1].add({row, col});
 			if (this.board.state[row][col].piece !== null && this.isBlack !== this.board.state[row][col].piece.isBlack) {
 				this.recurse(row, col, 0, 0, 1);
 			}
@@ -343,6 +355,18 @@ class Piece {
 		this.moves = [];
 		this.calculateOrthogonal(1);
 		this.calculateDiagonal(1);
+		// let inc = [-1, 0, 1];
+		// for (let rowInc of inc) {
+		// 	for (let colInc of inc) {
+		// 		if (rowInc === 0 && colInc === 0 )
+		// 			continue;
+		// 		const row = this.position.row + rowInc;
+		// 		const col = this.position.col + colInc;
+		// 		if (row < 0 || row > 7 || col < 0 || col > 7)
+		// 			continue;
+		// 		this.moves.push({row, col});
+		// 	}
+		// }
 	}
 	
 	checkKingMoves() {
@@ -353,7 +377,6 @@ class Piece {
 		for (const move of this.moves)	{
 			this.position.row = move.row;
 			this.position.col = move.col;
-			
 			if (this.board.isChecked(this.isBlack)){
 				continue;
 			}
