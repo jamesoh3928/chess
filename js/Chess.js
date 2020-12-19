@@ -1,5 +1,7 @@
-// TODO when king captures other piece, check if that is check!!!!!!
+// TODO when king is checked, only show unchecking move!
 class Board {	
+	COL_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
 	constructor() {
 		this.state = []; //TODO Time stone, modify state check if the move makes it 'check'
 		this._activePieces = [];
@@ -161,78 +163,91 @@ class Board {
 		piece.position = {row: destinationPosition.row, col: destinationPosition.col};
 		piece.calculateMoves();
 		
-		for (const currPiece of this._activePieces) {
-			if (piece === currPiece) {
-				continue;
-			}
-			
-			currPiece.calculateMoves();
-		}
-		
 		this._isBlackTurn = !this._isBlackTurn;
+
+		this.refresh();
 		
 		if (this._onTurnChange !== null) {
 			this._onTurnChange(this._isBlackTurn);
 		}
 	}
 	
-	isChecked(isBlack) {
-		let king = null;
 
-		for (const piece of this._activePieces) {
+
+	isChecked(isBlack) {
+		let king = this._kings[(isBlack)? 0: 1];
+
+		const ind = (isBlack)? 1: 0; //Check opponent's moves
+
+		for (const move of this._possibleMoves[ind]) {
+			if (move.row === king.position.row && move.col === king.position.col) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	unCheck(isBlack) {
+		const testBoard = new Board();
+
+		function initBoard(testBoard, oldBoard) {
+			testBoard._activePieces = [];
+			for (let i = 0; i < oldBoard._activePieces.length; i ++) {
+				testBoard._activePieces.push(Object.assign(oldBoard._activePieces[i]));
+			}
+
+			for (let row = 0; row < testBoard.state.length; row ++) {
+				for (let col = 0; col < testBoard.state[0].length; col ++) {
+					testBoard.state[row][col].piece = null;
+				}
+			}
+
+			for (const piece of testBoard._activePieces) {
+				testBoard.state[piece.position.row][piece.position.col].piece = piece; 
+			}
+
+			testBoard.refresh();
+		}
+		
+		for (let ind = 0; ind < this._activePieces.length; ind ++) {
+			const piece = testBoard._activePieces[ind];
+
 			if (piece.isBlack !== isBlack) {
 				continue;
 			}
-			
-			if (piece.type === "king") {
-				king = piece;
-				break;
-			}
-		}
 
-		//Test
-		const ind = (isBlack)? 1: 0;
-		for (const move of this._possibleMoves[ind]) {
-			if (move.row === king.position.row && move.col === king.position.col)
-				return true;
-		}
-		
-		// for (const piece of this._activePieces) {
-		// 	if (piece.isBlack === isBlack) {
-		// 		continue;
-		// 	}
-		// 	if (piece.type === "pawn"){
-		// 		const rowInc = (piece.isBlack)? -1: 1;
-		// 		for (const colInc of [1, -1]) {
-		// 			const col = piece.position.col + colInc;
-		// 			const row = piece.position.row + rowInc;
-					
-		// 			if (col > 7 || col < 0 || row > 7 || row < 0)
-		// 				continue;
-					
-		// 			const move = {row, col};
-					
-		// 			if (move.row === king.position.row && move.col === king.position.col) {
-		// 				return true;
-		// 			}
-		// 		}
-				
-		// 		continue;	
-		// 	}
+			initBoard(testBoard, this);
 			
-		// 	for (const move of piece.moves) {
-		// 		if (move.row === king.position.row && move.col === king.position.col) {
-		// 			return true;
-		// 		}
-		// 	}
-		// }
-		
-		return false;
+
+			const origin = {row: piece.position.row, col: piece.position.col};
+			let newMoves = [];
+
+			for (const move of piece.moves) {
+				piece.position.row = move.row;
+				piece.position.col = move.col;
+				testBoard.refresh();
+				if (testBoard.isChecked(isBlack)) {
+					console.log("adfasdf");  //TODO NOT ENTERING, BOARD IS COPIED BUT IT DOES NOT CHECK
+					continue;
+				}
+				newMoves.push(move);
+			}
+			piece.position.row = origin.row;
+			piece.position.col = origin.col;
+			this._activePieces[ind].move = newMoves;
+		}
 	}
-	
-	refresh() {
+
+	refresh(unChecking = false) {
 		for (const piece of this._activePieces) {
 			piece.calculateMoves();
+		}
+
+		if (!unChecking && this.isChecked(this._isBlackTurn)) {
+			// timestone
+			console.log("In if");
+			this.unCheck(this._isBlackTurn);
 		}
 	}
 }
@@ -355,18 +370,6 @@ class Piece {
 		this.moves = [];
 		this.calculateOrthogonal(1);
 		this.calculateDiagonal(1);
-		// let inc = [-1, 0, 1];
-		// for (let rowInc of inc) {
-		// 	for (let colInc of inc) {
-		// 		if (rowInc === 0 && colInc === 0 )
-		// 			continue;
-		// 		const row = this.position.row + rowInc;
-		// 		const col = this.position.col + colInc;
-		// 		if (row < 0 || row > 7 || col < 0 || col > 7)
-		// 			continue;
-		// 		this.moves.push({row, col});
-		// 	}
-		// }
 	}
 	
 	checkKingMoves() {
@@ -394,11 +397,6 @@ class Piece {
 	
 	calculateMoves() {
 		this.clearMoves();
-		
-		if (this.board.isChecked(this.isBlack)) {
-			// timestone
-			// return;
-		}
 		
 		switch (this.type) {
 			case "rook": {
