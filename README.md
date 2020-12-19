@@ -1,6 +1,6 @@
 # chess
 
-![alt text] (https://user-images.githubusercontent.com/31745861/102680865-bee3d400-41ff-11eb-8717-b4fda19d2202.PNG)
+![Capture](https://user-images.githubusercontent.com/31745861/102680980-c6f04380-4200-11eb-93cb-e8c485a38645.PNG)
 
 Making Chess game
 
