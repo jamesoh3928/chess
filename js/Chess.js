@@ -1,7 +1,5 @@
 // TODO when king is checked, only show unchecking move!
 class Board {	
-	COL_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
-
 	constructor() {
 		this.state = []; //TODO Time stone, modify state check if the move makes it 'check'
 		this._activePieces = [];
@@ -9,15 +7,22 @@ class Board {
 		this._isBlackTurn = false;
 		this._onTurnChange = null;
 		this._kings = [];
-		this._possibleMoves = [new Set(), new Set()];
+		this._possibleMoves = [[], []]; //TODO change possible moves to 2 dimensional grid that if it can move or no!!
 		
 		for (let row = 0; row < 8; row++) {
 			this.state[row] = [];
+			for (let p of [0, 1]) {
+				this._possibleMoves[p][row] = [];
+			}
 
 			for (let col = 0; col < 8; col++) {
 				this.state[row][col] = {
 					piece: null
 				};
+
+				for (let p of [0, 1]) {
+					this._possibleMoves[p][row][col] = false;
+				}
 			}
 		}
 		
@@ -27,6 +32,7 @@ class Board {
 			{number: 1, color: "white"},
 			{number: 6, color: "black"}
 		];
+
 		for (const index in rows) {
 			const row = rows[index];
 
@@ -179,67 +185,125 @@ class Board {
 
 		const ind = (isBlack)? 1: 0; //Check opponent's moves
 
-		for (const move of this._possibleMoves[ind]) {
-			if (move.row === king.position.row && move.col === king.position.col) {
-				return true;
-			}
-		}
+		if (this._possibleMoves[ind][king.position.row][king.position.col])
+			return true;
 
 		return false;
 	}
 
-	unCheck(isBlack) {
-		const testBoard = new Board();
-
-		function initBoard(testBoard, oldBoard) {
-			testBoard._activePieces = [];
-			for (let i = 0; i < oldBoard._activePieces.length; i ++) {
-				testBoard._activePieces.push(Object.assign(oldBoard._activePieces[i]));
+	deepCloneBoard(board) {
+		const newBoard = new Board();
+		
+		newBoard._isBlackTurn = board._isBlackTurn;
+		newBoard._onTurnChange = board.onTurnChange;
+		
+		// Set all the state null
+		for (const row = 0; row < newBoard.length; row ++) {
+			for (const col = 0; col < newBoard.length; col++) {
+				newBoard.state[row][col] = null;
 			}
+		}
 
-			for (let row = 0; row < testBoard.state.length; row ++) {
-				for (let col = 0; col < testBoard.state[0].length; col ++) {
-					testBoard.state[row][col].piece = null;
+		const newActivePieces = [];
+		const newCapturedPieces = [];
+		const appeared = new Set();
+
+		for (const newPiece of newBoard.activePieces) {
+			let found = false;
+			newPiece.board = newBoard;
+			for (const piece of board._activePieces) {
+				if (piece.isBlack === newPiece.isBlack && piece.type === newPiece.type && !appeared.has(piece)) {
+					newPiece.isBlack = piece.isBlack;
+					newPiece.position.row = piece.position.row;
+					newPiece.position.col = piece.position.col;
+					newActivePieces.push(newPiece);
+					newBoard.state[newPiece.position.row][newPiece.position.col] = {piece: newPiece};
+					found = true;
+					appeared.add(piece);
+					break;
 				}
 			}
 
-			for (const piece of testBoard._activePieces) {
-				testBoard.state[piece.position.row][piece.position.col].piece = piece; 
+			if (!found) {
+				newCapturedPieces.push(newPiece);
 			}
-
-			testBoard.refresh();
 		}
+
+		newBoard._activePieces = newActivePieces;
+		newBoard._capturedPieces = newCapturedPieces;
+		newBoard.refresh(true);
+		return newBoard;
+	}
+
+	unCheck(isBlack) {
+		console.log("Unchecking");
+
+		// function initBoard(testBoard, oldBoard) {
+		// 	testBoard._isBlackTurn = oldBoard.isBlackTurn;
+		// 	testBoard._activePieces = [];
+
+		// 	for (let i = 0; i < oldBoard._activePieces.length; i ++) {
+		// 		testBoard._activePieces.push(Object.assign(oldBoard._activePieces[i]));
+		// 	}
+
+		// 	for (let row = 0; row < testBoard.state.length; row ++) {
+		// 		for (let col = 0; col < testBoard.state[0].length; col ++) {
+		// 			testBoard.state[row][col].piece = null;
+		// 		}
+		// 	}
+
+		// 	for (const piece of testBoard._activePieces) {
+		// 		testBoard.state[piece.position.row][piece.position.col].piece = piece; 
+		// 	}
+
+		// 	testBoard.refresh();
+		// }
 		
 		for (let ind = 0; ind < this._activePieces.length; ind ++) {
-			const piece = testBoard._activePieces[ind];
+			// initBoard(testBoard, this);
+			const testBoard = this.deepCloneBoard(this);
 
+			let piece = testBoard._activePieces[ind];
 			if (piece.isBlack !== isBlack) {
 				continue;
 			}
-
-			initBoard(testBoard, this);
-			
 
 			const origin = {row: piece.position.row, col: piece.position.col};
 			let newMoves = [];
 
 			for (const move of piece.moves) {
-				piece.position.row = move.row;
-				piece.position.col = move.col;
-				testBoard.refresh();
+				//TODO NEXT TIME (POSITION NOT UPDATING CORRECTLY)
+				$.extend(true, piece.position, {
+					row: move.row,
+					col: move.col
+				  });
+				testBoard.refresh(true);
+				console.log(piece);
+				console.log(testBoard._possibleMoves);
+				console.log(testBoard._activePieces);
 				if (testBoard.isChecked(isBlack)) {
 					console.log("adfasdf");  //TODO NOT ENTERING, BOARD IS COPIED BUT IT DOES NOT CHECK
 					continue;
 				}
 				newMoves.push(move);
 			}
+
 			piece.position.row = origin.row;
 			piece.position.col = origin.col;
-			this._activePieces[ind].move = newMoves;
+			this._activePieces[ind].moves = newMoves;
 		}
 	}
 
 	refresh(unChecking = false) {
+		// Set possible Moves all false
+		for (let ind of [0, 1]) {
+			for (let row = 0; row < 8; row ++) {
+				for (let col = 0; col < 8; col ++) {
+					this._possibleMoves[ind][row][col] = false;
+				}
+			}
+		}
+
 		for (const piece of this._activePieces) {
 			piece.calculateMoves();
 		}
@@ -266,17 +330,19 @@ class Piece {
 			return;
 		}
 		
-		this.board._possibleMoves[(this.isBlack)? 0: 1].add({row, col}); 
-
 		if (this.board.state[row][col].piece !== null && this.board.state[row][col].piece.isBlack === this.isBlack) {
 			return;
 		}
 
+		this.board._possibleMoves[(this.isBlack)? 0: 1][row][col] = true; 
 		this.moves.push({row, col});
 
 		if (this.board.state[row][col].piece === null) {
 			this.recurse(row + rowIncrement, col + colIncrement, rowIncrement, colIncrement, --range);
-		}
+		} 
+		// else if (this.board.state[row][col].piece.isBlack !== this.isBlack) {
+		// 	this.board._possibleMoves[(this.isBlack)? 0: 1][row][col] = true;
+		// }
 	}
 	
 	calculateKnight(){
@@ -284,6 +350,8 @@ class Piece {
 		function push(row, col) {
 			if (row >= 0 && row <= 7 && col >= 0 && col <= 7 && (piece.board.state[row][col].piece === null || piece.board.state[row][col].piece.isBlack !== piece.isBlack)) {
 				piece.moves.push({row, col});
+				piece.board._possibleMoves[(piece.isBlack)? 0: 1][row][col] = true;
+				piece.board._possibleMoves[(piece.isBlack)? 0: 1][row][col] = true;
 			}
 		}
 		
@@ -291,8 +359,6 @@ class Piece {
 		const twos = [2, -2]
 		for (const one of ones) {
 			for (const two of twos) {
-				this.board._possibleMoves[(this.isBlack)? 0: 1].add({row: this.position.row + one, col: this.position.col + two});
-				this.board._possibleMoves[(this.isBlack)? 0: 1].add({row: this.position.row + two, col: this.position.col + one});
 				push(this.position.row + one, this.position.col + two);
 				push(this.position.row + two, this.position.col + one);
 			}
@@ -332,7 +398,7 @@ class Piece {
 			if (col < 0 || col > 7) {
 				continue;
 			}
-			this.board._possibleMoves[(this.isBlack)? 0: 1].add({row, col});
+			this.board._possibleMoves[(this.isBlack)? 0: 1][row][col] = true;
 			if (this.board.state[row][col].piece !== null && this.isBlack !== this.board.state[row][col].piece.isBlack) {
 				this.recurse(row, col, 0, 0, 1);
 			}
@@ -433,5 +499,6 @@ class Piece {
 				this.calculatePawn();
 			}
 		}
+		console.log(this);
 	}
 }
